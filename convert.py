@@ -2,9 +2,9 @@ import tensorflow as tf
 
 from os import path, makedirs
 from glob import glob
+from ioutil import minc
+from ioutil import tfrecord
 from difflib import ndiff
-from ioutils import minc
-from ioutils import tfrecord
 
 FLAGS = tf.app.flags.FLAGS
 

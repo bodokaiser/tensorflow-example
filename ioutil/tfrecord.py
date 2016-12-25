@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from ioutils.minc import SLICE_SHAPE
+from ioutil.minc import SLICE_SHAPE
 
 TFRECORD_OPTIONS = tf.python_io.TFRecordOptions(
     tf.python_io.TFRecordCompressionType.ZLIB)
@@ -14,7 +14,7 @@ def encode_example(us_slice, mr_slice):
     }))
 
 def decode_example(example):
-    featuress = tf.parse_single_example(example, features={
+    features = tf.parse_single_example(example, features={
         'us': tf.FixedLenFeature([], tf.string),
         'mr': tf.FixedLenFeature([], tf.string),
     })
