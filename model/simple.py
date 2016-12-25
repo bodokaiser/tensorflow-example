@@ -11,22 +11,9 @@ def weight_variable(shape):
 def bias_variable(shape):
     return tf.Variable(tf.constant(.1, shape=shape), name='bias')
 
-class Simple(common.Base):
-
-    def loss(self, us, us_):
-        with tf.name_scope('loss'):
-            loss = tf.nn.l2_loss(us-us_)
-
-        return loss
-
-    def train(self, loss):
-        with tf.name_scope('train'):
-            train = tf.train.AdamOptimizer().minimize(loss)
-
-        return train
+class Simple(common.Model):
 
     def interference(self, mr):
-        # TODO: use tensorflow slim for model interference
         with tf.name_scope('conv1'):
             conv1_w = weight_variable([3, 3, 1, 3])
             conv1_b = bias_variable([3])
