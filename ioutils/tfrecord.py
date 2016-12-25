@@ -1,16 +1,16 @@
 import tensorflow as tf
 
-from minc import SLICE_SHAPE
+from ioutils.minc import SLICE_SHAPE
 
 TFRECORD_OPTIONS = tf.python_io.TFRecordOptions(
     tf.python_io.TFRecordCompressionType.ZLIB)
 
-def encode_example(us, mr):
+def encode_example(us_slice, mr_slice):
     return tf.train.Example(features=tf.train.Features(feature={
         'us': tf.train.Feature(bytes_list=tf.train.BytesList(
-            value=[us[i].tostring()])),
+            value=[us_slice.tostring()])),
         'mr': tf.train.Feature(bytes_list=tf.train.BytesList(
-            value=[mr[i].tostring()])),
+            value=[mr_slice.tostring()])),
     }))
 
 def decode_example(example):
@@ -24,11 +24,11 @@ def decode_example(example):
         SLICE_SHAPE, 'reshape_mr')
     return us, mr
 
-def read_tfrecord(self, filename, session, options=TFRECORD_OPTIONS):
+def read_tfrecord(filename, session, options=TFRECORD_OPTIONS):
     examples = tf.python_io.tf_record_iterator(filename, options)
     return sess.run(list(zip(*[decode_example(e) for e in examples])))
 
-def write_tfrecord(self, filename, us, mr, options=TFRECORD_OPTIONS):
+def write_tfrecord(filename, us, mr, options=TFRECORD_OPTIONS):
     assert len(us) == len(mr)
     with tf.python_io.TFRecordWriter(filename, options) as writer:
         for i in range(len(us)):
