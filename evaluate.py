@@ -24,16 +24,14 @@ tf.app.flags.DEFINE_string('train_glob', 'data/tfrecord/13.tfrecord',
     """Path or wildcard to tfrecord to use for training.""")
 
 def main(_):
-    cnn = simple.Simple(threshold=FLAGS.threshold,
+    model = simple.Model(threshold=FLAGS.threshold,
         num_epochs=FLAGS.num_epochs, num_threads=FLAGS.num_threads,
         patch_size=FLAGS.patch_size, batch_size=FLAGS.batch_size)
 
-    mr, us = cnn.placeholder()
-    us_ = cnn.interference(mr)
-
-    loss = cnn.loss(us, us_)
-    train = cnn.train(loss)
-    batch = cnn.inputs(glob(FLAGS.train_glob))
+    us = model.interference()
+    loss = model.loss(us)
+    train = model.training(loss)
+    batch = model.inputs(glob(FLAGS.train_glob))
 
     with tf.Session() as sess:
         sess.run(tf.local_variables_initializer())
@@ -47,8 +45,8 @@ def main(_):
 
             while not coord.should_stop():
                 _, norm = sess.run([train, loss], feed_dict={
-                    mr: batch[0].eval(),
-                    us: batch[1].eval()
+                    model.mr: batch[0].eval(),
+                    model.us: batch[1].eval()
                 })
 
                 if step % 100 == 0:
