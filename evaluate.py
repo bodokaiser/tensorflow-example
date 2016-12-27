@@ -18,9 +18,11 @@ tf.app.flags.DEFINE_integer('batch_size', 30,
 tf.app.flags.DEFINE_integer('threshold', 1,
     """Remove patches with less or equal reduced sum.""")
 
-tf.app.flags.DEFINE_string('test_glob', 'data/tfrecord/11.tfrecord',
+tf.app.flags.DEFINE_string('log_path', '/tmp/mrtous',
+    """Path to write summary events to.""")
+tf.app.flags.DEFINE_string('test_path', 'data/tfrecord/11.tfrecord',
     """Path or wildcard to tfrecord to use for testing.""")
-tf.app.flags.DEFINE_string('train_glob', 'data/tfrecord/13.tfrecord',
+tf.app.flags.DEFINE_string('train_path', 'data/tfrecord/13.tfrecord',
     """Path or wildcard to tfrecord to use for training.""")
 
 def main(_):
@@ -30,26 +32,40 @@ def main(_):
 
     us = model.interference()
     loss = model.loss(us)
-    train = model.training(loss)
-    batch = model.inputs(glob(FLAGS.train_glob))
+    train = model.train(loss)
+    batch = model.inputs(glob(FLAGS.train_path))
+
+    tf.summary.image('us', batch[1], max_outputs=1)
+    tf.summary.image('us_', us, max_outputs=1)
 
     with tf.Session() as sess:
-        sess.run(tf.local_variables_initializer())
         sess.run(tf.global_variables_initializer())
+        sess.run(tf.local_variables_initializer())
 
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+
+        writer = tf.summary.FileWriter(FLAGS.log_path, sess.graph)
+        merged = tf.summary.merge_all()
 
         try:
             step = 0
 
             while not coord.should_stop():
-                _, norm = sess.run([train, loss], feed_dict={
-                    model.mr: batch[0].eval(),
-                    model.us: batch[1].eval()
-                })
+                run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+                run_metadata = tf.RunMetadata()
+
+                _, _, norm, summary = sess.run([train, us, loss, merged],
+                    feed_dict={
+                        model.mr: batch[0].eval(),
+                        model.us: batch[1].eval(),
+                    },
+                    options=run_options, run_metadata=run_metadata)
 
                 if step % 100 == 0:
+                    writer.add_run_metadata(run_metadata, 'step{}'.format(step))
+                    writer.add_summary(summary, step)
+
                     print('step: {}, norm: {:.0f}'.format(step, norm))
 
                 step += 1
@@ -57,6 +73,8 @@ def main(_):
         except tf.errors.OutOfRangeError as error:
             coord.request_stop(error)
         finally:
+            writer.close()
+
             coord.request_stop()
             coord.join(threads)
 

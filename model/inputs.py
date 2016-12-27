@@ -13,7 +13,7 @@ def filter_patches_indices(patches, value):
     return indices[:, 0]
 
 class Model(base.Model):
-    """Adds input pipeline on top of BaseModel."""
+    """Adds input pipeline to BaseModel."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

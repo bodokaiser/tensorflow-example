@@ -1,27 +1,49 @@
 import tensorflow as tf
-import tensorflow.contrib.slim as slim
 
 from model import inputs
 
+def _conv(x, weight):
+    return tf.nn.conv2d(x, weight, [1, 1, 1, 1], 'SAME')
+
+def _bias(shape, name='bias'):
+    init = tf.constant(.1, tf.float32, shape)
+    return _summary(tf.Variable(init, name=name), name)
+
+def _weight(shape, name='weight'):
+    init = tf.truncated_normal(shape, stddev=.1)
+    return _summary(tf.Variable(init, name=name), name)
+
+def _summary(var, name):
+    tf.summary.histogram(name, var)
+
+    return var
+
 class Model(inputs.Model):
-    """Simple one layer CNN model on top of """
+    """Adds simple one layer CNN to InputsModel."""
 
     def loss(self, us):
         with tf.name_scope('loss'):
-            loss = tf.nn.l2_loss(self.us-us)
+            loss = tf.nn.l2_loss(us-self.us)
 
-        tf.summary.scalar('loss', loss)
+            tf.summary.scalar('loss', loss)
 
         return loss
 
-    def training(self, loss):
+    def train(self, loss):
         with tf.name_scope('train'):
             train = tf.train.AdamOptimizer().minimize(loss)
 
         return train
 
     def interference(self):
-        net = slim.conv2d(self.mr, 3, [3, 3], scope='conv1')
-        net = slim.conv2d(net, 1, [1, 1], scope='conv2')
+        with tf.name_scope('conv1'):
+            conv1_w = _weight([3, 3, 1, 3])
+            conv1_b = _bias([3])
+            conv1 = _conv(self.mr, conv1_w) + conv1_b
 
-        return net
+        with tf.name_scope('conv2'):
+            conv2_w = _weight([1, 1, 3, 1])
+            conv2_b = _bias([1])
+            conv2 = _conv(conv1, conv2_w) + conv2_b
+
+        return conv2
