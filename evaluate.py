@@ -10,6 +10,8 @@ tf.app.flags.DEFINE_integer('num_epochs', 30,
 tf.app.flags.DEFINE_integer('num_threads', 4,
     """Number of parallel threads to use.""")
 
+tf.app.flags.DEFINE_integer('filter_size', 3,
+    """Filter size of conv weights.""")
 tf.app.flags.DEFINE_integer('patch_size', 30,
     """Patch size on us, mr volume slices.""")
 tf.app.flags.DEFINE_integer('batch_size', 30,
@@ -26,9 +28,13 @@ tf.app.flags.DEFINE_string('train_path', 'data/tfrecord/13.tfrecord',
     """Path or wildcard to tfrecord to use for training.""")
 
 def main(_):
-    model = simple.Model(threshold=FLAGS.threshold,
-        num_epochs=FLAGS.num_epochs, num_threads=FLAGS.num_threads,
-        patch_size=FLAGS.patch_size, batch_size=FLAGS.batch_size)
+    model = simple.Model(
+        threshold=FLAGS.threshold,
+        num_epochs=FLAGS.num_epochs,
+        num_threads=FLAGS.num_threads,
+        filter_size=FLAGS.filter_size,
+        patch_size=FLAGS.patch_size,
+        batch_size=FLAGS.batch_size)
 
     us = model.interference()
     loss = model.loss(us)
