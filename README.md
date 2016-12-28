@@ -34,11 +34,21 @@ Install [here](http://bic-mni.github.io).
 
 2. TFRecord
 
-Coming soon.
+`python3 convert.py`
 
-## Training
+### Partition
 
-Coming soon.
+Choose your patients and create corresponding `test`, `train` and `validation`
+datasets.
+
+`python3 partition.py input_path=13.tfrecord length=100`
+
+You can use `python3 count.py path=13.tfrecord` to see how much slices
+there are however note that us patches are not proportional to amount of slices.
+
+## Evaluation
+
+`python3 evaluate.py`
 
 ## License
 
