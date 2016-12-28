@@ -6,7 +6,7 @@ FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_integer('offset', 0,
     """Slice offset to start at.""")
-tf.app.flags.DEFINE_integer('length', 100,
+tf.app.flags.DEFINE_integer('length', 0,
     """Number of slices to extract.""")
 
 tf.app.flags.DEFINE_string('input_path', 'data/tfrecord/13.tfrecord',
@@ -17,12 +17,15 @@ tf.app.flags.DEFINE_string('output_path', 'data/tfrecord/test.tfrecord',
 def main(_):
     count = 0
     slices = []
-    offset = FLAGS.offset-1
+    offset = FLAGS.offset
     length = FLAGS.length
 
     for e in tfrecord.iter_tfrecord(FLAGS.input_path):
-        if count > offset and count - offset < length:
-            slices.append(e)
+        if count > offset:
+            if length > 0 and count - offset < length + 1:
+                slices.append(e)
+            else:
+                slices.append(e)
         count += 1
 
     tfrecord.write_tfrecord(FLAGS.output_path, slices)
