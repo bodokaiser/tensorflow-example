@@ -11,7 +11,7 @@ def encode_example(us_slice, mr_slice):
             value=[us_slice.tostring()])),
         'mr': tf.train.Feature(bytes_list=tf.train.BytesList(
             value=[mr_slice.tostring()])),
-    }))
+    })).SerializeToString()
 
 def decode_example(example):
     features = tf.parse_single_example(example, features={
@@ -24,12 +24,14 @@ def decode_example(example):
         SLICE_SHAPE, 'reshape_mr')
     return us, mr
 
-def read_tfrecord(filename, session, options=TFRECORD_OPTIONS):
-    examples = tf.python_io.tf_record_iterator(filename, options)
-    return sess.run(list(zip(*[decode_example(e) for e in examples])))
+def iter_tfrecord(filename, options=TFRECORD_OPTIONS):
+    return tf.python_io.tf_record_iterator(filename, options)
 
-def write_tfrecord(filename, us, mr, options=TFRECORD_OPTIONS):
-    assert len(us) == len(mr)
+def read_tfrecord(filename, session, options=TFRECORD_OPTIONS):
+    examples = iter_tfrecord(filename, options)
+    return session.run(list(zip(*[decode_example(e) for e in examples])))
+
+def write_tfrecord(filename, examples, options=TFRECORD_OPTIONS):
     with tf.python_io.TFRecordWriter(filename, options) as writer:
-        for i in range(len(us)):
-            writer.write(encode_example(us[i], mr[i]).SerializeToString())
+        for e in examples:
+            writer.write(e)

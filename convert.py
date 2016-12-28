@@ -31,8 +31,11 @@ def main(_):
         us = minc.read_minc(us_filenames[i])
         mr = minc.read_minc(mr_filenames[i])
 
+        assert len(us) == len(mr)
+        examples = [tfrecord.encode_example(us[j], mr[j]) for j in range(len(us))]
+
         tf_filename = FLAGS.tf_glob.replace('*', ids[i])
-        tfrecord.write_tfrecord(tf_filename, us, mr)
+        tfrecord.write_tfrecord(tf_filename, examples)
 
         print('converted {} and {} to {} ({} slices)'.format(
             us_filenames[i], mr_filenames[i], tf_filename, len(us)))
