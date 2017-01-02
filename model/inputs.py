@@ -15,14 +15,14 @@ def filter_patches_indices(patches, value):
 class Model(base.Model):
     """Adds input pipeline to BaseModel."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
+    def placeholder(self):
         shape = [None, self.patch_size, self.patch_size, 1]
 
         with tf.name_scope('placeholder'):
-            self.us = tf.placeholder(tf.float32, shape)
-            self.mr = tf.placeholder(tf.float32, shape)
+            us = tf.placeholder(tf.float32, shape)
+            mr = tf.placeholder(tf.float32, shape)
+
+        return mr, us
 
     def inputs(self, filenames):
         queue = tf.train.string_input_producer(filenames,

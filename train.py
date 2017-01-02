@@ -1,5 +1,6 @@
 import tensorflow as tf
 
+from os import path
 from glob import glob
 from model import simple
 
@@ -22,10 +23,10 @@ tf.app.flags.DEFINE_integer('threshold', 1,
 
 tf.app.flags.DEFINE_string('log_path', '/tmp/mrtous',
     """Path to write summary events to.""")
-tf.app.flags.DEFINE_string('test_path', 'data/tfrecord/11.tfrecord',
+tf.app.flags.DEFINE_string('record_path', 'data/test.tfrecord',
     """Path or wildcard to tfrecord to use for testing.""")
-tf.app.flags.DEFINE_string('train_path', 'data/tfrecord/13.tfrecord',
-    """Path or wildcard to tfrecord to use for training.""")
+tf.app.flags.DEFINE_string('variable_path', '/tmp/mrtous/var.ckpt',
+    """Filename of variable checkpoints.""")
 
 def main(_):
     model = simple.Model(
@@ -36,13 +37,15 @@ def main(_):
         patch_size=FLAGS.patch_size,
         batch_size=FLAGS.batch_size)
 
-    us = model.interference()
-    loss = model.loss(us)
-    train = model.train(loss)
-    batch = model.inputs(glob(FLAGS.train_path))
+    mr, us = model.placeholder()
+    us_ = model.interference(mr)
+    loss = model.loss(us, us_)
 
+    train, global_step = model.train(loss)
+    batch = model.inputs(glob(FLAGS.record_path))
+
+    tf.summary.image('us_', us_, max_outputs=1)
     tf.summary.image('us', batch[1], max_outputs=1)
-    tf.summary.image('us_', us, max_outputs=1)
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
@@ -51,30 +54,29 @@ def main(_):
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
-        writer = tf.summary.FileWriter(FLAGS.log_path, sess.graph)
         merged = tf.summary.merge_all()
+        writer = tf.summary.FileWriter(FLAGS.log_path, sess.graph)
 
         try:
-            step = 0
-
             while not coord.should_stop():
                 run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
                 run_metadata = tf.RunMetadata()
 
-                _, _, norm, summary = sess.run([train, us, loss, merged],
+                _, _, step, norm, summary = sess.run(
+                    [train, us_, global_step, loss, merged],
                     feed_dict={
-                        model.mr: batch[0].eval(),
-                        model.us: batch[1].eval(),
-                    },
-                    options=run_options, run_metadata=run_metadata)
+                        mr: batch[0].eval(),
+                        us: batch[1].eval(),
+                    }, options=run_options, run_metadata=run_metadata)
 
                 if step % 100 == 0:
-                    writer.add_run_metadata(run_metadata, 'step{}'.format(step))
+                    writer.add_run_metadata(run_metadata,
+                        'step{}'.format(step), step)
                     writer.add_summary(summary, step)
 
                     print('step: {}, norm: {:.0f}'.format(step, norm))
 
-                step += 1
+                global_step += 1
 
         except tf.errors.OutOfRangeError as error:
             coord.request_stop(error)

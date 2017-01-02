@@ -22,7 +22,7 @@ def decode_example(example):
         SLICE_SHAPE, 'reshape_us')
     mr = tf.reshape(tf.decode_raw(features['mr'], tf.float32),
         SLICE_SHAPE, 'reshape_mr')
-    return us, mr
+    return mr, us
 
 def iter_tfrecord(filename, options=TFRECORD_OPTIONS):
     return tf.python_io.tf_record_iterator(filename, options)
