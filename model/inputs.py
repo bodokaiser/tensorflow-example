@@ -19,8 +19,8 @@ class Model(base.Model):
         shape = [None, self.patch_size, self.patch_size, 1]
 
         with tf.name_scope('placeholder'):
-            us = tf.placeholder(tf.float32, shape)
-            mr = tf.placeholder(tf.float32, shape)
+            us = tf.placeholder(tf.float32, shape, name='us')
+            mr = tf.placeholder(tf.float32, shape, name='mr')
 
         return mr, us
 

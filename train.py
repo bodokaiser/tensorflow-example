@@ -1,6 +1,5 @@
 import tensorflow as tf
 
-from os import path
 from glob import glob
 from model import simple
 
@@ -21,12 +20,10 @@ tf.app.flags.DEFINE_integer('batch_size', 30,
 tf.app.flags.DEFINE_integer('threshold', 1,
     """Remove patches with less or equal reduced sum.""")
 
-tf.app.flags.DEFINE_string('log_path', '/tmp/mrtous',
+tf.app.flags.DEFINE_string('logdir', '/tmp/mrtous',
     """Path to write summary events to.""")
-tf.app.flags.DEFINE_string('record_path', 'data/test.tfrecord',
+tf.app.flags.DEFINE_string('records', 'data/test.tfrecord',
     """Path or wildcard to tfrecord to use for testing.""")
-tf.app.flags.DEFINE_string('variable_path', '/tmp/mrtous/var.ckpt',
-    """Filename of variable checkpoints.""")
 
 def main(_):
     model = simple.Model(
@@ -42,49 +39,22 @@ def main(_):
     loss = model.loss(us, us_)
 
     train, global_step = model.train(loss)
-    batch = model.inputs(glob(FLAGS.record_path))
+    batch = model.inputs(glob(FLAGS.records))
 
     tf.summary.image('us_', us_, max_outputs=1)
-    tf.summary.image('us', batch[1], max_outputs=1)
+    tf.summary.image('us', us, max_outputs=1)
 
-    with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
-        sess.run(tf.local_variables_initializer())
+    summary_op = tf.summary.merge_all()
 
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(sess=sess, coord=coord)
-
-        merged = tf.summary.merge_all()
-        writer = tf.summary.FileWriter(FLAGS.log_path, sess.graph)
-
-        try:
-            while not coord.should_stop():
-                run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
-                run_metadata = tf.RunMetadata()
-
-                _, _, step, norm, summary = sess.run(
-                    [train, us_, global_step, loss, merged],
-                    feed_dict={
-                        mr: batch[0].eval(),
-                        us: batch[1].eval(),
-                    }, options=run_options, run_metadata=run_metadata)
-
-                if step % 100 == 0:
-                    writer.add_run_metadata(run_metadata,
-                        'step{}'.format(step), step)
-                    writer.add_summary(summary, step)
-
-                    print('step: {}, norm: {:.0f}'.format(step, norm))
-
-                global_step += 1
-
-        except tf.errors.OutOfRangeError as error:
-            coord.request_stop(error)
-        finally:
-            writer.close()
-
-            coord.request_stop()
-            coord.join(threads)
+    with tf.train.MonitoredTrainingSession() as session:
+        while not session.should_stop():
+            _, _, step, norm, summary = session.run(
+                [train, us_, global_step, loss, summary_op],
+                feed_dict={
+                    mr: batch[0].eval(session=session),
+                    us: batch[1].eval(session=session),
+                })
+            print('step {}, norm {:.0f}'.format(step, norm))
 
 if __name__ == '__main__':
     tf.app.run()
