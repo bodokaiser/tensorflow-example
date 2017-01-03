@@ -56,6 +56,11 @@ def main(_):
             output_dir=FLAGS.logdir,
             summary_op=tf.summary.merge_all()
         ),
+        tf.train.CheckpointSaverHook(
+            save_steps=1000,
+            saver=tf.train.Saver(),
+            checkpoint_dir=FLAGS.logdir,
+        ),
         SignalHandlerHook(),
     ]
 
