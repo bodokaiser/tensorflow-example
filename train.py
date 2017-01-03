@@ -34,27 +34,27 @@ def main(_):
         patch_size=FLAGS.patch_size,
         batch_size=FLAGS.batch_size)
 
-    mr, us = model.placeholder()
+    mr, us = model.inputs(glob(FLAGS.records))
     us_ = model.interference(mr)
     loss = model.loss(us, us_)
-
-    train, global_step = model.train(loss)
-    batch = model.inputs(glob(FLAGS.records))
+    train = model.train(loss)
 
     tf.summary.image('us_', us_, max_outputs=1)
     tf.summary.image('us', us, max_outputs=1)
 
     summary_op = tf.summary.merge_all()
 
-    with tf.train.MonitoredTrainingSession() as session:
+    hooks = [
+        tf.train.LoggingTensorHook({
+            'step': tf.train.get_global_step(tf.get_default_graph()),
+            'norm': loss,
+        }, every_n_iter=100)
+    ]
+
+    with tf.train.MonitoredTrainingSession(hooks=hooks) as session:
         while not session.should_stop():
-            _, _, step, norm, summary = session.run(
-                [train, us_, global_step, loss, summary_op],
-                feed_dict={
-                    mr: batch[0].eval(session=session),
-                    us: batch[1].eval(session=session),
-                })
-            print('step {}, norm {:.0f}'.format(step, norm))
+            session.run(train)
 
 if __name__ == '__main__':
+    tf.logging.set_verbosity(tf.logging.INFO)
     tf.app.run()

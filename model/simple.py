@@ -23,17 +23,16 @@ class Model(inputs.Model):
     def loss(self, us, _us):
         with tf.name_scope('loss'):
             loss = tf.nn.l2_loss(us-_us)
-
-            tf.summary.scalar('loss', loss)
+        tf.summary.scalar('loss', loss)
 
         return loss
 
     def train(self, loss):
         with tf.name_scope('train'):
-            step = tf.Variable(0, name='step', trainable=False)
-            train = tf.train.AdamOptimizer().minimize(loss, global_step=step)
+            train = tf.train.AdamOptimizer().minimize(loss,
+                global_step=tf.contrib.framework.get_or_create_global_step())
 
-        return train, step
+        return train
 
     def interference(self, mr):
         fs = self._filter_size
