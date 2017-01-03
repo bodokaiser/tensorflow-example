@@ -29,6 +29,12 @@ tf.app.flags.DEFINE_string('logdir', '/tmp/mrtous',
 tf.app.flags.DEFINE_string('records', 'data/test.tfrecord',
     """Path or wildcard to tfrecord to use for testing.""")
 
+def init_fn(scaffold, session):
+    latest_ckpt = tf.train.latest_checkpoint(FLAGS.logdir)
+
+    if latest_ckpt:
+        scaffold.saver.restore(session, latest_ckpt)
+
 def main(_):
     model = SimpleModel(
         threshold=FLAGS.threshold,
@@ -46,6 +52,12 @@ def main(_):
     tf.summary.image('us_', us_, max_outputs=1)
     tf.summary.image('us', us, max_outputs=1)
 
+    saver = tf.train.Saver()
+    scaffold = tf.train.Scaffold(
+        saver=saver,
+        init_fn=init_fn,
+    )
+
     hooks = [
         tf.train.LoggingTensorHook({
             'step': tf.train.get_global_step(tf.get_default_graph()),
@@ -58,7 +70,7 @@ def main(_):
         ),
         tf.train.CheckpointSaverHook(
             save_steps=1000,
-            saver=tf.train.Saver(),
+            scaffold=scaffold,
             checkpoint_dir=FLAGS.logdir,
         ),
         SignalHandlerHook(),
@@ -67,7 +79,7 @@ def main(_):
     if FLAGS.num_steps > 0:
         hooks.append(tf.train.StopAtStepHook(FLAGS.num_steps))
 
-    with tf.train.MonitoredTrainingSession(hooks=hooks) as session:
+    with tf.train.MonitoredTrainingSession(scaffold=scaffold, hooks=hooks) as session:
         while not session.should_stop():
             session.run(train)
 
