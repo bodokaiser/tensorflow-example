@@ -20,9 +20,12 @@ def _summary(var, name):
 class Model(inputs.Model):
     """Adds simple one layer CNN to InputsModel."""
 
-    def loss(self, us, _us):
+    def loss(self, us, us_):
+        tf.summary.image('us_', us_, max_outputs=1)
+        tf.summary.image('us', us, max_outputs=1)
+
         with tf.name_scope('loss'):
-            loss = tf.nn.l2_loss(us-_us)
+            loss = tf.nn.l2_loss(us-us_)
             tf.summary.scalar('loss', loss)
 
         return loss
