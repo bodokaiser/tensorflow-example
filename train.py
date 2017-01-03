@@ -1,7 +1,9 @@
 import tensorflow as tf
 
-from glob import glob
-from model import simple
+import glob
+
+from model import SimpleModel
+from hooks import SignalHandlerHook
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -9,6 +11,8 @@ tf.app.flags.DEFINE_integer('num_epochs', 30,
     """Number of epochs to train on.""")
 tf.app.flags.DEFINE_integer('num_threads', 4,
     """Number of parallel threads to use.""")
+tf.app.flags.DEFINE_integer('num_steps', 0,
+    """Number of steps to run training.""")
 
 tf.app.flags.DEFINE_integer('filter_size', 3,
     """Filter size of conv weights.""")
@@ -26,7 +30,7 @@ tf.app.flags.DEFINE_string('records', 'data/test.tfrecord',
     """Path or wildcard to tfrecord to use for testing.""")
 
 def main(_):
-    model = simple.Model(
+    model = SimpleModel(
         threshold=FLAGS.threshold,
         num_epochs=FLAGS.num_epochs,
         num_threads=FLAGS.num_threads,
@@ -34,7 +38,7 @@ def main(_):
         patch_size=FLAGS.patch_size,
         batch_size=FLAGS.batch_size)
 
-    mr, us = model.inputs(glob(FLAGS.records))
+    mr, us = model.inputs(glob.glob(FLAGS.records))
     us_ = model.interference(mr)
     loss = model.loss(us, us_)
     train = model.train(loss)
@@ -51,8 +55,12 @@ def main(_):
             save_steps=1000,
             output_dir=FLAGS.logdir,
             summary_op=tf.summary.merge_all()
-        )
+        ),
+        SignalHandlerHook(),
     ]
+
+    if FLAGS.num_steps > 0:
+        hooks.append(tf.train.StopAtStepHook(FLAGS.num_steps))
 
     with tf.train.MonitoredTrainingSession(hooks=hooks) as session:
         while not session.should_stop():
