@@ -23,7 +23,7 @@ class Model(inputs.Model):
     def loss(self, us, _us):
         with tf.name_scope('loss'):
             loss = tf.nn.l2_loss(us-_us)
-        tf.summary.scalar('loss', loss)
+            tf.summary.scalar('loss', loss)
 
         return loss
 
