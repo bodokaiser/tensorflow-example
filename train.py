@@ -42,13 +42,16 @@ def main(_):
     tf.summary.image('us_', us_, max_outputs=1)
     tf.summary.image('us', us, max_outputs=1)
 
-    summary_op = tf.summary.merge_all()
-
     hooks = [
         tf.train.LoggingTensorHook({
             'step': tf.train.get_global_step(tf.get_default_graph()),
             'norm': loss,
-        }, every_n_iter=100)
+        }, every_n_iter=100),
+        tf.train.SummarySaverHook(
+            save_steps=1000,
+            output_dir=FLAGS.logdir,
+            summary_op=tf.summary.merge_all()
+        )
     ]
 
     with tf.train.MonitoredTrainingSession(hooks=hooks) as session:
