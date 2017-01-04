@@ -1,11 +1,16 @@
 import tensorflow as tf
 
+import os
 import glob
 import hooks
 import model
+import utils
 import runner
 
 FLAGS = tf.app.flags.FLAGS
+
+tf.app.flags.DEFINE_string('mode', 'train',
+    """Either train or test.""")
 
 tf.app.flags.DEFINE_integer('num_epochs', 30,
     """Number of epochs to train on.""")
@@ -29,10 +34,46 @@ tf.app.flags.DEFINE_integer('summary_steps', 1000,
 tf.app.flags.DEFINE_integer('checkpoint_steps', 1000,
     """Number of steps to save variable checkpoint.""")
 
-tf.app.flags.DEFINE_string('logdir', '/tmp/mrtous',
-    """Path to write summary events to.""")
+tf.app.flags.DEFINE_string('name', 'train',
+    """Name to use as final path or prefix (most test, train, validation).""")
+tf.app.flags.DEFINE_string('outdir', '/tmp/mrtous',
+    """Path to write summary and variables to.""")
 tf.app.flags.DEFINE_string('records', 'data/test.tfrecord',
     """Path or wildcard to tfrecord to use for testing.""")
+
+def train(model, records, logdir, vardir):
+    mr, us = model.inputs(records)
+    us_ = model.interference(mr)
+    loss = model.loss(us, us_)
+    train = model.train(loss)
+
+    r = runner.Runner(vardir)
+    r.add_hook(hooks.SignalHandlerHook())
+    r.add_hook(hooks.LoggingHook({'norm': loss}, 100))
+    r.add_hook(hooks.StopAfterNStepsHook(FLAGS.max_steps))
+    r.add_hook(hooks.SummarySaverHook(logdir, FLAGS.summary_steps))
+    r.add_hook(hooks.CheckpointSaverHook(vardir, FLAGS.checkpoint_steps,
+        r.scaffold))
+
+    with r.monitored_session() as session:
+        while not session.should_stop():
+            session.run(train)
+
+def test(model, records, logdir, vardir):
+    mr, us = model.inputs(records)
+    us_ = model.interference(mr)
+    loss = model.loss(us, us_)
+
+    r = runner.Runner(vardir)
+    r.add_hook(hooks.StepCounterHook())
+    r.add_hook(hooks.SignalHandlerHook())
+    r.add_hook(hooks.LoggingHook({'norm': loss}, 100))
+    r.add_hook(hooks.StopAfterNStepsHook(FLAGS.max_steps))
+    r.add_hook(hooks.SummarySaverHook(logdir, FLAGS.summary_steps))
+
+    with r.monitored_session() as session:
+        while not session.should_stop():
+            session.run(loss)
 
 def main(_):
     m = model.SimpleModel(
@@ -43,23 +84,16 @@ def main(_):
         patch_size=FLAGS.patch_size,
         batch_size=FLAGS.batch_size)
 
-    mr, us = m.inputs(glob.glob(FLAGS.records))
-    us_ = m.interference(mr)
-    loss = m.loss(us, us_)
-    train = m.train(loss)
+    if FLAGS.mode == 'train':
+        run = train
+    elif FLAGS.mode == 'test':
+        run = test
+    else:
+        raise ValueError('Unknown mode.')
 
-    r = runner.Runner(FLAGS.logdir,
-        save_summary_steps=FLAGS.summary_steps,
-        save_checkpoint_steps=FLAGS.checkpoint_steps)
-    r.add_hook(hooks.SignalHandlerHook())
-    r.add_hook(hooks.LoggingHook({'norm': loss}, 100))
-
-    if FLAGS.max_steps > 0:
-        r.add_hook(tf.train.StopAtStepHook(FLAGS.max_steps))
-
-    with r.monitored_session() as session:
-        while not session.should_stop():
-            session.run(train)
+    run(m, glob.glob(FLAGS.records),
+        os.path.join(FLAGS.outdir, FLAGS.name),
+        os.path.join(FLAGS.outdir, ''))
 
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.INFO)
