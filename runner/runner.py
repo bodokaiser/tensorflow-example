@@ -8,7 +8,6 @@ class Runner(object):
 
             if latest_ckpt:
                 scaffold.saver.restore(session, latest_ckpt)
-                print('restored')
 
         self._hooks = []
         self._saver = tf.train.Saver()

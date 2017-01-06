@@ -3,7 +3,7 @@ import tensorflow as tf
 from utils import utils
 
 class StepCounterHook(tf.train.SessionRunHook):
-    """Updates global_step after each run (required for testing)."""
+    """Restores and updates global_step after each run."""
 
     def begin(self):
         self._step = utils.get_global_step()

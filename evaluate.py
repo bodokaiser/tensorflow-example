@@ -12,33 +12,35 @@ FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string('mode', 'train',
     """Either train or test.""")
 
-tf.app.flags.DEFINE_integer('num_epochs', 30,
+tf.app.flags.DEFINE_integer('num_epochs', 1,
     """Number of epochs to train on.""")
-tf.app.flags.DEFINE_integer('num_threads', 4,
+tf.app.flags.DEFINE_integer('num_threads', 8,
     """Number of parallel threads to use.""")
 
 tf.app.flags.DEFINE_integer('filter_size', 3,
     """Filter size of conv weights.""")
 tf.app.flags.DEFINE_integer('patch_size', 30,
     """Patch size on us, mr volume slices.""")
-tf.app.flags.DEFINE_integer('batch_size', 30,
+tf.app.flags.DEFINE_integer('batch_size', 100,
     """Batch size of us, mr pairs for training.""")
 
-tf.app.flags.DEFINE_integer('threshold', 1,
+tf.app.flags.DEFINE_float('threshold', 1,
     """Remove patches with less or equal reduced sum.""")
 
 tf.app.flags.DEFINE_integer('max_steps', 0,
     """Number of steps to run training.""")
-tf.app.flags.DEFINE_integer('summary_steps', 1000,
+tf.app.flags.DEFINE_integer('logging_steps', 5,
+    """Number of steps to do logging.""")
+tf.app.flags.DEFINE_integer('summary_steps', 5,
     """Number of steps to save summary.""")
-tf.app.flags.DEFINE_integer('checkpoint_steps', 1000,
+tf.app.flags.DEFINE_integer('checkpoint_steps', 50,
     """Number of steps to save variable checkpoint.""")
 
 tf.app.flags.DEFINE_string('name', 'train',
     """Name to use as final path or prefix (most test, train, validation).""")
 tf.app.flags.DEFINE_string('outdir', '/tmp/mrtous',
     """Path to write summary and variables to.""")
-tf.app.flags.DEFINE_string('records', 'data/test.tfrecord',
+tf.app.flags.DEFINE_string('records', 'data/train.tfrecord',
     """Path or wildcard to tfrecord to use for testing.""")
 
 def train(model, records, logdir, vardir):
@@ -49,8 +51,8 @@ def train(model, records, logdir, vardir):
 
     r = runner.Runner(vardir)
     r.add_hook(hooks.SignalHandlerHook())
-    r.add_hook(hooks.LoggingHook({'norm': loss}, 100))
     r.add_hook(hooks.StopAfterNStepsHook(FLAGS.max_steps))
+    r.add_hook(hooks.LoggingHook({'norm': loss}, FLAGS.logging_steps))
     r.add_hook(hooks.SummarySaverHook(logdir, FLAGS.summary_steps))
     r.add_hook(hooks.CheckpointSaverHook(vardir, FLAGS.checkpoint_steps,
         r.scaffold))
@@ -86,10 +88,10 @@ def main(_):
 
     if FLAGS.mode == 'train':
         run = train
-    elif FLAGS.mode == 'test':
+    elif FLAGS.mode == 'test' or FLAGS.mode == 'validation':
         run = test
     else:
-        raise ValueError('Unknown mode.')
+        raise ValueError('Unknown mode {}.'.format(FLAGS.mode))
 
     run(m, glob.glob(FLAGS.records),
         os.path.join(FLAGS.outdir, FLAGS.name),

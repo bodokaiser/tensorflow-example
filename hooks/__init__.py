@@ -27,4 +27,9 @@ class CheckpointSaverHook(tf.train.CheckpointSaverHook):
 class StopAfterNStepsHook(tf.train.StopAtStepHook):
 
     def __init__(self, steps):
+        self._steps = steps
         super().__init__(steps)
+
+    def after_run(self, run_context, run_values):
+        if self._steps > 0:
+            super().after_run(run_context, run_values)
