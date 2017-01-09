@@ -8,6 +8,10 @@ def extract_patches(image, shape):
         [1, 1, 1, 1], 'VALID')
     return tf.reshape(patches, [-1, *shape[1:]])
 
+def filter_patches_indices(patches, value):
+    indices = tf.where(tf.greater(tf.reduce_sum(patches, [1, 2]), value))
+    return indices[:, 0]
+
 class Model(base.Model):
     """Adds input pipeline to BaseModel."""
 
@@ -27,5 +31,10 @@ class Model(base.Model):
             mr_patches = extract_patches(mr_slice, shape)
             us_patches = extract_patches(us_slice, shape)
 
-        return tf.train.batch([mr_patches, us_patches],
+        with tf.name_scope('filter'):
+            indices = filter_patches_indices(us_patches, 0)
+            mr_patches_filtered = tf.gather(mr_patches, indices)
+            us_patches_filtered = tf.gather(us_patches, indices)
+
+        return tf.train.batch([mr_patches_filtered, us_patches_filtered],
             self.batch_size, num_threads=self.num_threads, enqueue_many=True)
