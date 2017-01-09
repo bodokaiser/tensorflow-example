@@ -24,9 +24,6 @@ tf.app.flags.DEFINE_integer('patch_size', 30,
 tf.app.flags.DEFINE_integer('batch_size', 100,
     """Batch size of us, mr pairs for training.""")
 
-tf.app.flags.DEFINE_float('threshold', 1,
-    """Remove patches with less or equal reduced sum.""")
-
 tf.app.flags.DEFINE_integer('max_steps', 0,
     """Number of steps to run training.""")
 tf.app.flags.DEFINE_integer('logging_steps', 5,
@@ -79,7 +76,6 @@ def test(model, records, logdir, vardir):
 
 def main(_):
     m = model.SimpleModel(
-        threshold=FLAGS.threshold,
         num_epochs=FLAGS.num_epochs,
         num_threads=FLAGS.num_threads,
         filter_size=FLAGS.filter_size,

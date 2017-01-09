@@ -3,18 +3,13 @@ import abc
 class Model(abc.ABC):
     """Registers required parameters and makes them available as properties."""
 
-    def __init__(self, threshold, batch_size, patch_size, filter_size,
+    def __init__(self, batch_size, patch_size, filter_size,
         num_epochs, num_threads):
-        self._threshold = threshold
         self._batch_size = batch_size
         self._patch_size = patch_size
         self._filter_size = filter_size
         self._num_epochs = num_epochs
         self._num_threads = num_threads
-
-    @property
-    def threshold(self):
-        return self._threshold
 
     @property
     def batch_size(self):

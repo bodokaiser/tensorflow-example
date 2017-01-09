@@ -8,11 +8,8 @@ SUMMARY_STEPS = 1
 CHECKPOINT_STEPS = 50
 
 def build_args(mode, options, epoch):
-    outdir = ''
-    outdir += 'batch{}-'.format(options['batch_size'])
-    outdir += 'patch{}-'.format(options['patch_size'])
-    outdir += 'filter{}-'.format(options['filter_size'])
-    outdir += 'threshold{}'.format(options['threshold'])
+    outdir = 'patch{}-filter{}'.format(options['patch_size'],
+        options['filter_size'])
 
     args = []
     args.append('--mode={0}'.format(mode))
@@ -24,31 +21,24 @@ def build_args(mode, options, epoch):
     args.append('--batch_size={}'.format(options['batch_size']))
     args.append('--patch_size={}'.format(options['patch_size']))
     args.append('--filter_size={}'.format(options['filter_size']))
-    args.append('--threshold={}'.format(options['threshold']))
     args.append('--logging_steps={}'.format(LOGGING_STEPS))
     args.append('--summary_steps={}'.format(SUMMARY_STEPS))
     args.append('--checkpoint_steps={}'.format(CHECKPOINT_STEPS))
 
     return args
 
-for patch_size in [5, 10, 15, 20, 25, 30, 35]:
-    max_filter_size = math.ceil(.5*patch_size)
+for patch_size in [5, 7, 9, 10, 12, 13, 15, 17, 19, 20, 22, 25, 27, 30, 33]:
+    for filter_size in filter(lambda v: v < .7*patch_size, [3, 6, 9, 12, 15, 18]):
+        for epoch in range(0, EPOCHS+1):
+            options = {
+                'batch_size': 100,
+                'patch_size': patch_size,
+                'filter_size': filter_size,
+            }
 
-    for filter_size in range(3, max_filter_size, 2):
-        max_threshold = math.floor(.8*patch_size)
-
-        for threshold in range(0, max_threshold, 5):
-            for epoch in range(0, EPOCHS+1):
-                options = {
-                    'batch_size': 100,
-                    'patch_size': patch_size,
-                    'filter_size': filter_size,
-                    'threshold': threshold,
-                }
-
-                subprocess.check_call(['python3', 'evaluate.py',
-                    *build_args('train', options, epoch)])
-                subprocess.check_call(['python3', 'evaluate.py',
-                    *build_args('test', options, epoch)])
-                subprocess.check_call(['python3', 'evaluate.py',
-                    *build_args('validation', options, epoch)])
+            subprocess.check_call(['python3', 'evaluate.py',
+                *build_args('train', options, epoch)])
+            subprocess.check_call(['python3', 'evaluate.py',
+                *build_args('test', options, epoch)])
+            subprocess.check_call(['python3', 'evaluate.py',
+                *build_args('validation', options, epoch)])
