@@ -1,3 +1,2 @@
-from .base import Model as BaseModel
-from .inputs import Model as InputsModel
-from .simple import Model as SimpleModel
+from model.inputs import Model as BaseModel
+from model.simple import Model as SimpleModel

@@ -1,11 +1,12 @@
 import tensorflow as tf
 
-from ioutil.minc import SLICE_SHAPE
+SLICE_HEIGHT = 466
+SLICE_WIDTH = 394
 
 TFRECORD_OPTIONS = tf.python_io.TFRecordOptions(
     tf.python_io.TFRecordCompressionType.ZLIB)
 
-def encode_example(us_slice, mr_slice):
+def encode_example(mr_slice, us_slice):
     return tf.train.Example(features=tf.train.Features(feature={
         'us': tf.train.Feature(bytes_list=tf.train.BytesList(
             value=[us_slice.tostring()])),
@@ -18,10 +19,11 @@ def decode_example(example):
         'us': tf.FixedLenFeature([], tf.string),
         'mr': tf.FixedLenFeature([], tf.string),
     })
-    us = tf.reshape(tf.decode_raw(features['us'], tf.float32),
-        SLICE_SHAPE, 'reshape_us')
+    shape = [SLICE_HEIGHT, SLICE_WIDTH, 1]
     mr = tf.reshape(tf.decode_raw(features['mr'], tf.float32),
-        SLICE_SHAPE, 'reshape_mr')
+        shape, 'reshape_mr')
+    us = tf.reshape(tf.decode_raw(features['us'], tf.float32),
+        shape, 'reshape_us')
     return mr, us
 
 def iter_tfrecord(filename, options=TFRECORD_OPTIONS):

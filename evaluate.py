@@ -4,7 +4,6 @@ import os
 import glob
 import hooks
 import model
-import utils
 import runner
 
 FLAGS = tf.app.flags.FLAGS
@@ -64,7 +63,6 @@ def test(model, records, logdir, vardir):
     loss = model.loss(us, us_)
 
     r = runner.Runner(vardir)
-    r.add_hook(hooks.StepCounterHook())
     r.add_hook(hooks.SignalHandlerHook())
     r.add_hook(hooks.LoggingHook({'norm': loss}, 100))
     r.add_hook(hooks.StopAfterNStepsHook(FLAGS.max_steps))

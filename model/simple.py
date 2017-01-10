@@ -18,7 +18,6 @@ def _summary(var, name):
     return var
 
 class Model(inputs.Model):
-    """Adds simple one layer CNN to InputsModel."""
 
     def loss(self, us, us_):
         tf.summary.image('us_', us_, max_outputs=1)

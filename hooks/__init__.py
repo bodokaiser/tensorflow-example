@@ -1,15 +1,15 @@
 import tensorflow as tf
 
-from utils import utils
-from hooks import signal, counter
+from hooks.signal import SignalHandlerHook
 
-StepCounterHook = counter.StepCounterHook
-SignalHandlerHook = signal.SignalHandlerHook
+def get_global_step():
+    graph = tf.get_default_graph()
+    return tf.contrib.framework.get_or_create_global_step(graph)
 
 class LoggingHook(tf.train.LoggingTensorHook):
 
     def __init__(self, tensors, steps):
-        super().__init__({'step': utils.get_global_step(), **tensors},
+        super().__init__({'step': get_global_step(), **tensors},
             every_n_iter=steps)
 
 class SummarySaverHook(tf.train.SummarySaverHook):

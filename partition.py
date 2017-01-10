@@ -22,8 +22,11 @@ def main(_):
 
     for e in tfrecord.iter_tfrecord(FLAGS.input_path):
         if count > offset:
-            if length > 0 and count - offset < length + 1:
-                slices.append(e)
+            if length > 0:
+                if count - offset < length + 1:
+                    slices.append(e)
+                else:
+                    break
             else:
                 slices.append(e)
         count += 1
