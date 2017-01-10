@@ -6,6 +6,16 @@ def get_global_step():
     graph = tf.get_default_graph()
     return tf.contrib.framework.get_or_create_global_step(graph)
 
+class StepCounterHook(tf.train.SessionRunHook):
+    """Restores and updates global_step after each run."""
+
+    def begin(self):
+        self._step = get_global_step()
+        self._count = tf.assign_add(self._step, 1)
+
+    def before_run(self, run_context):
+        return tf.train.SessionRunArgs(self._count)
+
 class LoggingHook(tf.train.LoggingTensorHook):
 
     def __init__(self, tensors, steps):

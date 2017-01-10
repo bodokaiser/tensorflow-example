@@ -16,20 +16,20 @@ tf.app.flags.DEFINE_integer('num_epochs', 1,
 tf.app.flags.DEFINE_integer('num_threads', 8,
     """Number of parallel threads to use.""")
 
+tf.app.flags.DEFINE_float('threshold', 0,
+    """Remove patches with sum below.""")
 tf.app.flags.DEFINE_integer('filter_size', 3,
     """Filter size of conv weights.""")
-tf.app.flags.DEFINE_integer('patch_size', 30,
+tf.app.flags.DEFINE_integer('patch_size', 7,
     """Patch size on us, mr volume slices.""")
-tf.app.flags.DEFINE_integer('batch_size', 100,
+tf.app.flags.DEFINE_integer('batch_size', 128,
     """Batch size of us, mr pairs for training.""")
 
-tf.app.flags.DEFINE_integer('max_steps', 0,
-    """Number of steps to run training.""")
 tf.app.flags.DEFINE_integer('logging_steps', 5,
     """Number of steps to do logging.""")
-tf.app.flags.DEFINE_integer('summary_steps', 5,
+tf.app.flags.DEFINE_integer('summary_steps', 10,
     """Number of steps to save summary.""")
-tf.app.flags.DEFINE_integer('checkpoint_steps', 50,
+tf.app.flags.DEFINE_integer('checkpoint_steps', 500,
     """Number of steps to save variable checkpoint.""")
 
 tf.app.flags.DEFINE_string('name', 'train',
@@ -47,7 +47,6 @@ def train(model, records, logdir, vardir):
 
     r = runner.Runner(vardir)
     r.add_hook(hooks.SignalHandlerHook())
-    r.add_hook(hooks.StopAfterNStepsHook(FLAGS.max_steps))
     r.add_hook(hooks.LoggingHook({'norm': loss}, FLAGS.logging_steps))
     r.add_hook(hooks.SummarySaverHook(logdir, FLAGS.summary_steps))
     r.add_hook(hooks.CheckpointSaverHook(vardir, FLAGS.checkpoint_steps,
@@ -63,9 +62,9 @@ def test(model, records, logdir, vardir):
     loss = model.loss(us, us_)
 
     r = runner.Runner(vardir)
+    r.add_hook(hooks.StepCounterHook())
     r.add_hook(hooks.SignalHandlerHook())
     r.add_hook(hooks.LoggingHook({'norm': loss}, 100))
-    r.add_hook(hooks.StopAfterNStepsHook(FLAGS.max_steps))
     r.add_hook(hooks.SummarySaverHook(logdir, FLAGS.summary_steps))
 
     with r.monitored_session() as session:
@@ -76,9 +75,10 @@ def main(_):
     m = model.SimpleModel(
         num_epochs=FLAGS.num_epochs,
         num_threads=FLAGS.num_threads,
-        filter_size=FLAGS.filter_size,
+        threshold=FLAGS.threshold,
         patch_size=FLAGS.patch_size,
-        batch_size=FLAGS.batch_size)
+        batch_size=FLAGS.batch_size,
+        filter_size=FLAGS.filter_size)
 
     if FLAGS.mode == 'train':
         run = train

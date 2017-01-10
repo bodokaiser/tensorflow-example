@@ -5,13 +5,18 @@ from ioutil import tfrecord
 
 class Model(object):
 
-    def __init__(self, batch_size, patch_size, filter_size,
+    def __init__(self, threshold, batch_size, patch_size, filter_size,
         num_epochs, num_threads):
+        self._threshold = threshold
         self._batch_size = batch_size
         self._patch_size = patch_size
         self._filter_size = filter_size
         self._num_epochs = num_epochs
         self._num_threads = num_threads
+
+    @property
+    def threshold(self):
+        return self._threshold
 
     @property
     def batch_size(self):
@@ -33,7 +38,7 @@ class Model(object):
     def num_threads(self):
         return self._num_threads
 
-    def inputs(self, filenames, filter_value=0):
+    def inputs(self, filenames):
         queue = tf.train.string_input_producer(filenames,
             num_epochs=self.num_epochs)
 
@@ -56,11 +61,12 @@ class Model(object):
             us_patches = transform.image_to_patches(us_slice, self.patch_size,
                 self.patch_size)
 
-        if filter_value is not None:
+        if self.threshold is not None:
             with tf.name_scope('filter'):
-                indices = transform.filter_indices(us_patches, filter_value)
+                indices = transform.filter_indices(us_patches, self.threshold)
                 mr_patches = tf.gather(mr_patches, indices)
                 us_patches = tf.gather(us_patches, indices)
 
-        return tf.train.batch([mr_patches, us_patches],
-            self.batch_size, num_threads=self.num_threads, enqueue_many=True)
+        return tf.train.batch([mr_patches, us_patches], self.batch_size,
+            self.num_threads, self.num_threads*self.batch_size*3,
+            enqueue_many=True)
