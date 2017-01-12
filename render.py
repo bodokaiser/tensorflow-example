@@ -5,6 +5,7 @@ import tensorflow as tf
 import re
 import os
 import glob
+import subprocess
 
 from scipy import misc
 from model import simple
@@ -18,9 +19,7 @@ tf.app.flags.DEFINE_integer('steps', 1,
 
 tf.app.flags.DEFINE_string('vardir', '/tmp/mrtous/patch5-filter3-threshold0',
     """Path to variables to load.""")
-tf.app.flags.DEFINE_string('outdir', '/tmp/mrtous',
-    """Path to write image files to.""")
-tf.app.flags.DEFINE_string('records', 'data/train.tfrecord',
+tf.app.flags.DEFINE_string('recorddir', 'data/train.tfrecord',
     """Path to tfrecord to use as input.""")
 
 def extract_params_from_path(path):
@@ -29,9 +28,8 @@ def extract_params_from_path(path):
     extract_number = lambda s: int(re.findall('\d+', s)[0])
     return {extract_alpha(p): extract_number(p) for p in fragments}
 
-def main(_):
-    params = extract_params_from_path(FLAGS.vardir)
-    records = glob.glob(FLAGS.records)
+def render(vardir, records):
+    params = extract_params_from_path(vardir)
 
     height = transform.compatible_dim(tfrecord.SLICE_HEIGHT, params['patch'])
     width = transform.compatible_dim(tfrecord.SLICE_WIDTH, params['patch'])
@@ -49,7 +47,7 @@ def main(_):
 
     saver = tf.train.Saver()
     coord = tf.train.Coordinator()
-    checkpt = tf.train.latest_checkpoint(FLAGS.vardir)
+    checkpt = tf.train.latest_checkpoint(vardir)
 
     with tf.Session() as sess:
         sess.run([
@@ -58,6 +56,7 @@ def main(_):
         ])
 
         if checkpt:
+            print('loaded checkpoint {}'.format(checkpt))
             saver.restore(sess, checkpt)
 
         threads = tf.train.start_queue_runners(sess, coord)
@@ -77,9 +76,9 @@ def main(_):
                             re_img[i, j] = 0
 
                 misc.toimage(us_img[:, :, 0], cmin=0.0, cmax=1.0).save(
-                    os.path.join(FLAGS.outdir, 'us{}.png'.format(step)))
+                    vardir+'-us{}.png'.format(step))
                 misc.toimage(re_img[:, :, 0], cmin=0.0, cmax=1.0).save(
-                    os.path.join(FLAGS.outdir, 're{}.png'.format(step)))
+                    vardir+'-re{}.png'.format(step))
 
                 print('rendered slice {}'.format(step))
 
@@ -89,6 +88,11 @@ def main(_):
         finally:
             coord.request_stop()
             coord.join(threads)
+
+def main(_):
+    for vardir in glob.glob(FLAGS.vardir):
+        tf.reset_default_graph()
+        render(vardir, glob.glob(FLAGS.recorddir))
 
 if __name__ == '__main__':
     tf.app.run()

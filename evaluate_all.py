@@ -20,7 +20,7 @@ def build_args(mode, options, epoch):
 
 for patch_size in [5, 10, 15, 25, 35]:
     for filter_size in filter(lambda v: v < .7*patch_size, [3, 6, 9, 12]):
-        for threshold in filter(lambda v: v < .8*patch_size**2, [0, 1, 2, 5, 10, 15, 20, 25]):
+        for threshold in filter(lambda v: v > .8*patch_size**2 and v <= patch_size**2, [0, 1, 2, 5, 10, 15, 20, 30, 50, 100, 500, 600, 800, 1000, 1200]):
             for epoch in range(0, EPOCHS+1):
                 options = {
                     'patch_size': patch_size,
