@@ -29,10 +29,9 @@ class Model(inputs.Model):
 
         return loss
 
-    def train(self, loss):
+    def train(self, loss, step):
         with tf.name_scope('train'):
-            train = tf.train.AdamOptimizer().minimize(loss,
-                global_step=tf.contrib.framework.get_or_create_global_step())
+            train = tf.train.AdamOptimizer().minimize(loss, global_step=step)
 
         return train
 
