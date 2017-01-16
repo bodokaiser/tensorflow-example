@@ -1,16 +1,9 @@
-import tensorflow as tf
-
 import os
+import argparse
+import tensorflow as tf
 
 from ioutil import minc
 from ioutil import tfrecord
-
-FLAGS = tf.app.flags.FLAGS
-
-tf.app.flags.DEFINE_integer('offset', 0,
-    """Slice offset to start at.""")
-tf.app.flags.DEFINE_integer('length', 0,
-    """Number of slices to extract.""")
 
 def count(source):
     with tf.Session() as session:
@@ -32,16 +25,16 @@ def convert(mr_source, us_source, target):
         [tfrecord.encode_example(mr[i], us[i]) for i in range(len(mr))])
 
     print('converted {} and {} to {} ({} slices)'.format(
-        mr_source, us_source, tf_target, len(mr)))
+        mr_source, us_source, target, len(mr)))
 
-def partition(source, target):
+def partition(source, target, length, offset):
     count = 0
     slices = []
 
     for e in tfrecord.iter_tfrecord(source):
-        if count > FLAGS.offset:
-            if FLAGS.length > 0:
-                if count - FLAGS.offset < FLAGS.length + 1:
+        if count > offset:
+            if length > 0:
+                if count - offset < length + 1:
                     slices.append(e)
                 else:
                     break
@@ -55,14 +48,29 @@ def partition(source, target):
         len(slices), source, FLAGS.offset, target))
 
 def main(args):
-    if args[1] == 'count':
-        return count(args[2])
-    if args[1] == 'convert':
-        return convert(*args[2:5])
-    if args[1] == 'partition':
-        return partition(*args[2:4])
-
-    print('Unknown subcommand use either count, convert or partition.')
+    if args.action == 'count':
+        count(args.source)
+    elif args.action == 'convert':
+        convert(args.mr_source, args.us_source, args.target)
+    elif args.action == 'partition':
+        partition(args.source, args.target, args.length, args.offset)
 
 if __name__ == '__main__':
-    tf.app.run()
+    parser = argparse.ArgumentParser(
+        description='format minc and tfrecord datasets')
+    subparsers = parser.add_subparsers(dest='action')
+
+    subparser1 = subparsers.add_parser('count')
+    subparser1.add_argument('source', help='path to tfrecord source')
+
+    subparser2 = subparsers.add_parser('convert')
+    subparser2.add_argument('mr_source', help='path to minc mr source')
+    subparser2.add_argument('us_source', help='path to minc us source')
+    subparser2.add_argument('target', help='path to tfrecord target')
+
+    subparser3 = subparsers.add_parser('partition')
+    subparser3.add_argument('--length', help='amount of slices', type=int)
+    subparser3.add_argument('--offset', help='amount of slices to skip', type=int)
+    subparser3.set_defaults(length=0, offset=0)
+
+    main(parser.parse_args())
