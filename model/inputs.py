@@ -6,13 +6,14 @@ from ioutil import tfrecord
 class Model(object):
 
     def __init__(self, batch_size, patch_size, filter_size,
-        num_epochs, num_threads, threshold=0):
+        num_epochs, num_threads, num_filters, threshold=0):
         self._threshold = threshold
         self._batch_size = batch_size
         self._patch_size = patch_size
         self._filter_size = filter_size
         self._num_epochs = num_epochs
         self._num_threads = num_threads
+        self._num_filters = num_filters
 
     @property
     def threshold(self):
@@ -37,6 +38,10 @@ class Model(object):
     @property
     def num_threads(self):
         return self._num_threads
+
+    @property
+    def num_filters(self):
+        return self._num_filters
 
     def inputs(self, filenames):
         queue = tf.train.string_input_producer(filenames,

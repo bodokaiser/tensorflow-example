@@ -14,6 +14,8 @@ tf.app.flags.DEFINE_integer('num_epochs', 1,
     """Number of epochs to train on.""")
 tf.app.flags.DEFINE_integer('num_threads', 8,
     """Number of parallel threads to use.""")
+tf.app.flags.DEFINE_integer('num_filters', 3,
+    """Number of filters to use.""")
 
 tf.app.flags.DEFINE_integer('filter_size', 3,
     """Filter size of conv weights.""")
@@ -72,6 +74,7 @@ def main(_):
     m = model.SimpleModel(
         num_epochs=FLAGS.num_epochs,
         num_threads=FLAGS.num_threads,
+        num_filters=FLAGS.num_filters,
         patch_size=FLAGS.patch_size,
         batch_size=FLAGS.batch_size,
         filter_size=FLAGS.filter_size)

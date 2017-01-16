@@ -37,15 +37,16 @@ class Model(inputs.Model):
         return train
 
     def interference(self, mr):
-        fs = self._filter_size
+        filter_size = self.filter_size
+        filter_num = self.num_filters
 
         with tf.name_scope('conv1'):
-            conv1_w = _weight([fs, fs, 1, fs])
-            conv1_b = _bias([fs])
+            conv1_w = _weight([filter_size, filter_size, 1, filter_num])
+            conv1_b = _bias([filter_num])
             conv1 = _conv(mr, conv1_w) + conv1_b
 
         with tf.name_scope('conv2'):
-            conv2_w = _weight([1, 1, fs, 1])
+            conv2_w = _weight([1, 1, filter_num, 1])
             conv2_b = _bias([1])
             conv2 = _conv(conv1, conv2_w) + conv2_b
 
