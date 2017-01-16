@@ -15,8 +15,6 @@ tf.app.flags.DEFINE_integer('num_epochs', 1,
 tf.app.flags.DEFINE_integer('num_threads', 8,
     """Number of parallel threads to use.""")
 
-tf.app.flags.DEFINE_float('threshold', 0,
-    """Remove patches with sum below.""")
 tf.app.flags.DEFINE_integer('filter_size', 3,
     """Filter size of conv weights.""")
 tf.app.flags.DEFINE_integer('patch_size', 7,
@@ -74,7 +72,6 @@ def main(_):
     m = model.SimpleModel(
         num_epochs=FLAGS.num_epochs,
         num_threads=FLAGS.num_threads,
-        threshold=FLAGS.threshold,
         patch_size=FLAGS.patch_size,
         batch_size=FLAGS.batch_size,
         filter_size=FLAGS.filter_size)
@@ -86,7 +83,7 @@ def main(_):
     else:
         raise ValueError('Unknown mode {}.'.format(FLAGS.mode))
 
-    run(m, FLAGS.record,
+    run(m, [FLAGS.record],
         os.path.join(FLAGS.outdir, FLAGS.name),
         os.path.join(FLAGS.outdir, ''))
 

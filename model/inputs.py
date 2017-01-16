@@ -5,8 +5,8 @@ from ioutil import tfrecord
 
 class Model(object):
 
-    def __init__(self, threshold, batch_size, patch_size, filter_size,
-        num_epochs, num_threads):
+    def __init__(self, batch_size, patch_size, filter_size,
+        num_epochs, num_threads, threshold=0):
         self._threshold = threshold
         self._batch_size = batch_size
         self._patch_size = patch_size
@@ -63,7 +63,8 @@ class Model(object):
 
         if self.threshold is not None:
             with tf.name_scope('filter'):
-                indices = transform.filter_indices(us_patches, self.threshold)
+                indices = transform.filter_indices(us_patches,
+                    self.threshold*self.patch_size**2)
                 mr_patches = tf.gather(mr_patches, indices)
                 us_patches = tf.gather(us_patches, indices)
 
