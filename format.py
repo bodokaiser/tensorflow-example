@@ -18,20 +18,21 @@ def count(source):
 
     print('counted {} slices in {}'.format(count, source))
 
-def convert(mr_filename, us_filename, tf_filename):
-    tf_dirname = os.path.dirname(tf_filename)
+def convert(mr_source, us_source, target):
+    dirname = os.path.dirname(target)
 
-    if tf_dirname != '':
-        os.makedirs(tf_dirname, exist_ok=True)
+    if dirname != '':
+        os.makedirs(dirname, exist_ok=True)
 
-    mr = minc.read_minc(mr_filename)
-    us = minc.read_minc(us_filename)
+    mr = minc.read_minc(mr_source)
+    us = minc.read_minc(us_source)
+    assert len(mr) == len(us)
 
-    tfrecord.write_tfrecord(tf_filename,
+    tfrecord.write_tfrecord(target,
         [tfrecord.encode_example(mr[i], us[i]) for i in range(len(mr))])
 
     print('converted {} and {} to {} ({} slices)'.format(
-        mr_filename, us_filename, tf_filename, len(us)))
+        mr_source, us_source, tf_target, len(mr)))
 
 def partition(source, target):
     count = 0
