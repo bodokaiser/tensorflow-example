@@ -53,7 +53,7 @@ python3 format.py partition 13.tfrecord validation.tfrecord length=100
 ### Evaluation
 
 ```shell
-python3 model.py train
+python3 evaluate.py
 ```
 
 ## License

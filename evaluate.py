@@ -1,9 +1,8 @@
+import os
 import tensorflow as tf
 
-import os
-import hooks
-import model
-import runner
+from model import simple
+from hooks import signal
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -38,40 +37,50 @@ tf.app.flags.DEFINE_string('outdir', '/tmp/mrtous',
 tf.app.flags.DEFINE_string('record', 'data/train.tfrecord',
     """Path to tfrecord to use for training or testing.""")
 
+def init_fn(scaffold, session):
+    latest_ckpt = tf.train.latest_checkpoint(FLAGS.outdir)
+
+    if latest_ckpt:
+        scaffold.saver.restore(session, latest_ckpt)
+
+def get_global_step():
+    graph = tf.get_default_graph()
+    return tf.contrib.framework.get_or_create_global_step(graph)
+
 def train(model, records, logdir, vardir):
     mr, us = model.inputs(records)
     us_ = model.interference(mr)
     loss = model.loss(us, us_)
     train = model.train(loss)
 
-    r = runner.Runner(vardir)
-    r.add_hook(hooks.SignalHandlerHook())
-    r.add_hook(hooks.LoggingHook({'norm': loss}, FLAGS.logging_steps))
-    r.add_hook(hooks.SummarySaverHook(logdir, FLAGS.summary_steps))
-    r.add_hook(hooks.CheckpointSaverHook(vardir, FLAGS.checkpoint_steps,
-        r.scaffold))
+    saver = tf.train.Saver()
+    scaffold = tf.train.Scaffold(init_fn=init_fn, saver=saver)
 
-    with r.monitored_session() as session:
+    hooks = [
+        signal.SignalHandlerHook(),
+        tf.train.LoggingTensorHook({
+            'norm': loss,
+            'step': get_global_step(),
+        }, FLAGS.logging_steps),
+        tf.train.SummarySaverHook(
+            output_dir=logdir,
+            save_steps=FLAGS.summary_steps,
+            summary_op=tf.summary.merge_all(),
+        ),
+        tf.train.CheckpointSaverHook(
+            checkpoint_dir=vardir,
+            save_steps=FLAGS.checkpoint_steps,
+            scaffold=scaffold,
+        ),
+    ]
+
+    with tf.train.MonitoredTrainingSession(
+        hooks=hooks, scaffold=scaffold) as session:
         while not session.should_stop():
             session.run(train)
 
-def test(model, records, logdir, vardir):
-    mr, us = model.inputs(records)
-    us_ = model.interference(mr)
-    loss = model.loss(us, us_)
-
-    r = runner.Runner(vardir)
-    r.add_hook(hooks.StepCounterHook())
-    r.add_hook(hooks.SignalHandlerHook())
-    r.add_hook(hooks.LoggingHook({'norm': loss}, 100))
-    r.add_hook(hooks.SummarySaverHook(logdir, FLAGS.summary_steps))
-
-    with r.monitored_session() as session:
-        while not session.should_stop():
-            session.run(loss)
-
 def main(_):
-    m = model.SimpleModel(
+    m = simple.Model(
         num_epochs=FLAGS.num_epochs,
         num_threads=FLAGS.num_threads,
         num_filters=FLAGS.num_filters,
@@ -79,15 +88,8 @@ def main(_):
         batch_size=FLAGS.batch_size,
         filter_size=FLAGS.filter_size)
 
-    if FLAGS.mode == 'train':
-        run = train
-    elif FLAGS.mode == 'test' or FLAGS.mode == 'validation':
-        run = test
-    else:
-        raise ValueError('Unknown mode {}.'.format(FLAGS.mode))
-
-    run(m, [FLAGS.record],
-        os.path.join(FLAGS.outdir, FLAGS.name),
+    train(m, [FLAGS.record],
+        os.path.join(FLAGS.outdir, 'train'),
         os.path.join(FLAGS.outdir, ''))
 
 if __name__ == '__main__':
