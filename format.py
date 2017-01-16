@@ -1,8 +1,6 @@
 import tensorflow as tf
 
 import os
-import glob
-import difflib
 
 from ioutil import minc
 from ioutil import tfrecord
@@ -20,32 +18,20 @@ def count(source):
 
     print('counted {} slices in {}'.format(count, source))
 
-def convert(mr_source, us_source, target):
-    mr_filenames = glob.glob(mr_source)
-    us_filenames = glob.glob(us_source)
+def convert(mr_filename, us_filename, tf_filename):
+    tf_dirname = os.path.dirname(tf_filename)
 
-    def match_ids(filenames, glob):
-        diff = lambda a, b: ''.join(d[2:] for d in difflib.ndiff(a, b) if d.startswith('+ '))
-        return [diff(glob, f) for f in filenames]
+    if tf_dirname != '':
+        os.makedirs(tf_dirname, exist_ok=True)
 
-    assert len(us_filenames) == len(mr_filenames)
-    ids = match_ids(us_filenames, us_source)
-    assert ids == match_ids(mr_filenames, mr_source)
+    mr = minc.read_minc(mr_filename)
+    us = minc.read_minc(us_filename)
 
-    os.makedirs(os.path.dirname(target), exist_ok=True)
+    tfrecord.write_tfrecord(tf_filename,
+        [tfrecord.encode_example(mr[i], us[i]) for i in range(len(mr))])
 
-    for i in range(len(us_filenames)):
-        mr = minc.read_minc(mr_filenames[i])
-        us = minc.read_minc(us_filenames[i])
-
-        assert len(us) == len(mr)
-        examples = [tfrecord.encode_example(mr[j], us[j]) for j in range(len(us))]
-
-        tf_filename = target.replace('*', ids[i])
-        tfrecord.write_tfrecord(tf_filename, examples)
-
-        print('converted {} and {} to {} ({} slices)'.format(
-            mr_filenames[i], us_filenames[i], tf_filename, len(us)))
+    print('converted {} and {} to {} ({} slices)'.format(
+        mr_filename, us_filename, tf_filename, len(us)))
 
 def partition(source, target):
     count = 0

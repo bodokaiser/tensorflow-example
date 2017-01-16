@@ -1,7 +1,6 @@
 import tensorflow as tf
 
 import os
-import glob
 import hooks
 import model
 import runner
@@ -36,8 +35,8 @@ tf.app.flags.DEFINE_string('name', 'train',
     """Name to use as final path or prefix (most test, train, validation).""")
 tf.app.flags.DEFINE_string('outdir', '/tmp/mrtous',
     """Path to write summary and variables to.""")
-tf.app.flags.DEFINE_string('records', 'data/train.tfrecord',
-    """Path or wildcard to tfrecord to use for testing.""")
+tf.app.flags.DEFINE_string('record', 'data/train.tfrecord',
+    """Path to tfrecord to use for training or testing.""")
 
 def train(model, records, logdir, vardir):
     mr, us = model.inputs(records)
@@ -87,7 +86,7 @@ def main(_):
     else:
         raise ValueError('Unknown mode {}.'.format(FLAGS.mode))
 
-    run(m, glob.glob(FLAGS.records),
+    run(m, FLAGS.record,
         os.path.join(FLAGS.outdir, FLAGS.name),
         os.path.join(FLAGS.outdir, ''))
 

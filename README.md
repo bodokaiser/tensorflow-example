@@ -34,7 +34,7 @@ Install [here](http://bic-mni.github.io).
 
 2. TFRecord
 
-`python3 format.py convert *_mr.mnc *_us.mnc *.tfrecord`
+`python3 format.py convert 01_mr.mnc 91_us.mnc 01.tfrecord`
 
 ### Partition
 
@@ -48,7 +48,7 @@ there are however note that us patches are not proportional to amount of slices.
 
 ## Evaluation
 
-`python3 model.py`
+`python3 model.py train`
 
 ## License
 
