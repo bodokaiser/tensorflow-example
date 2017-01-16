@@ -4,51 +4,57 @@ Generate US images from MR brain images.
 
 ## Setup
 
-### Dataset
+1. Download the [group2 dataset][dataset].
+2. Download and install the [minc toolset][toolset].
 
-Download [here](http://www.bic.mni.mcgill.ca/%7Elaurence/data/data.html) (group 2).
+[dataset]: http://www.bic.mni.mcgill.ca/%7Elaurence/data/data.html
+[toolset]: http://bic-mni.github.io
 
-### Toolset
-
-Required to work with MINC format.
-
-Install [here](http://bic-mni.github.io).
-
-## Pre Processing
+## Usage
 
 ### Registration
 
-1. Create Transformation
+```shell
+# export the register transformation in the GUI
+register -sync 01_mr_tal.mnc 01a_us_tal.mnc 01_all.tag
 
-`register -sync 01_mr_tal.mnc 01a_us_tal.mnc 01_all.tag`
-
-2. Apply Transformation
-
-`mincresample 01a_us_tal.mnc 01_us_reg.mnc -transformation 01_reg.xfm -like 01_mr_tal.mnc`
+# apply the transformation to ultrasound images
+mincresample 01a_us_tal.mnc 01_us_reg.mnc -transformation 01_reg.xfm -like 01_mr_tal.mnc
+```
 
 ### Conversion
 
-1. HDF5
+The MNI-BITE dataset uses [MINC-1.0][minc1] and [MINC-2.0][minc2] format. Later
+extends [HDF5][hdf5] which has a maintained python implementation [h5py][h5py].
 
-`mincconvert -2 01_mr_tal.mnc 01_mr.mnc`
+[h5py]: http://www.h5py.org
+[hdf5]: https://en.wikipedia.org/wiki/Hierarchical_Data_Format
+[minc1]: https://en.wikibooks.org/wiki/MINC/SoftwareDevelopment/MINC1_File_Format_Reference
+[minc2]: https://en.wikibooks.org/wiki/MINC/SoftwareDevelopment/MINC2.0_File_Format_Reference
 
-2. TFRecord
+```shell
+# ensure that all dataset is in MINC-2.0
+mincconvert -2 01_mr_tal.mnc 01_mr.mnc
 
-`python3 format.py convert 01_mr.mnc 91_us.mnc 01.tfrecord`
+# use provided format python script to convert MINC-2.0 to TFRecord
+python3 format.py convert 01_mr.mnc 01_us.mnc 01.tfrecord
+```
 
 ### Partition
 
 Choose your patients and create corresponding `test`, `train` and `validation`
 datasets.
 
-`python3 format.py partition 13.tfrecord length=100 --offset=10`
+```shell
+# extracts first 100 mr and us slices into validation.tfrecord
+python3 format.py partition 13.tfrecord validation.tfrecord length=100
+```
 
-You can use `python3 format.py count 13.tfrecord` to see how much slices
-there are however note that us patches are not proportional to amount of slices.
+### Evaluation
 
-## Evaluation
-
-`python3 model.py train`
+```shell
+python3 model.py train
+```
 
 ## License
 
