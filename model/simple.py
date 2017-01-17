@@ -19,34 +19,48 @@ def _summary(var, name):
 
 class Model(inputs.Model):
 
-    def loss(self, us, us_):
-        tf.summary.image('us_', us_, max_outputs=1)
-        tf.summary.image('us', us, max_outputs=1)
+    def __init__(self, filter_size, filter_num):
+        super().__init__()
 
+        self._filter_num = filter_num
+        self._filter_size = filter_size
+
+    @property
+    def filter_num(self):
+        return self._filter_num
+
+    @property
+    def filter_size(self):
+        return self._filter_size
+
+    def loss(self, re):
         with tf.name_scope('loss'):
-            loss = tf.nn.l2_loss(us-us_)
-            tf.summary.scalar('loss', loss)
+            loss = tf.nn.l2_loss(re)
 
         return loss
 
-    def train(self, loss, step):
+    def train(self, loss):
         with tf.name_scope('train'):
-            train = tf.train.AdamOptimizer().minimize(loss, global_step=step)
+            train = tf.train.AdamOptimizer().minimize(loss)
 
         return train
 
-    def interference(self, mr):
-        filter_size = self.filter_size
-        filter_num = self.num_filters
-
+    def conv1(self):
         with tf.name_scope('conv1'):
-            conv1_w = _weight([filter_size, filter_size, 1, filter_num])
-            conv1_b = _bias([filter_num])
-            conv1 = _conv(mr, conv1_w) + conv1_b
+            weight = _weight([self.filter_size, self.filter_size, 1,
+                self.filter_num])
+            bias = _bias([self.filter_num])
+        return weight, bias
 
+    def conv2(self):
         with tf.name_scope('conv2'):
-            conv2_w = _weight([1, 1, filter_num, 1])
-            conv2_b = _bias([1])
-            conv2 = _conv(conv1, conv2_w) + conv2_b
+            weight = _weight([1, 1, self.filter_num, 1])
+            bias = _bias([1])
 
-        return conv2
+        return weight, bias
+
+    def interference(self, conv1, conv2, batch):
+        cnn = _conv(batch, conv1[0]) + conv1[1]
+        cnn = _conv(cnn, conv2[0]) + conv2[1]
+
+        return cnn

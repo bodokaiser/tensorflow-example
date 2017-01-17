@@ -5,55 +5,76 @@ import tensorflow as tf
 from model import simple
 from hooks import signal
 
-DEFAULT_LOGGING_STEPS = 10
-DEFAULT_SUMMARY_STEPS = 5
+def train(model, conv1, conv2, filenames):
+    mr, us = model.patches(filenames)
+    re = model.interference(conv1, conv2, mr)
 
-def train(model, records, outdir):
-    step = tf.contrib.framework.get_or_create_global_step(
-        tf.get_default_graph())
+    loss = model.loss(re-us)
+    train = model.train(loss)
 
-    mr, us = model.inputs(records)
-    us_ = model.interference(mr)
-    loss = model.loss(us, us_)
-    train = model.train(loss, step)
+    with tf.name_scope('training'):
+        tf.summary.scalar('loss', loss)
+        tf.summary.image('mr', mr)
+        tf.summary.image('us', us)
+        tf.summary.image('re', re)
+        tf.summary.image('df', re-us)
 
-    hooks = [
-        tf.train.LoggingTensorHook({
-            'norm': loss,
-            'step': step,
-        }, DEFAULT_LOGGING_STEPS),
-        tf.train.SummarySaverHook(
-            output_dir=outdir,
-            save_steps=DEFAULT_SUMMARY_STEPS,
-            summary_op=tf.summary.merge_all(),
-        ),
-    ]
-
-    with tf.train.MonitoredTrainingSession(hooks=hooks) as session:
-        while not session.should_stop():
-            session.run(train)
+    return [train, loss]
 
 def main(args):
-    tf.logging.set_verbosity(tf.logging.INFO)
-
     model = simple.Model(
-        num_filters=args.num_filters,
+        filter_num=args.filter_num,
         filter_size=args.filter_size)
 
-    train(model, [args.record], args.outdir)
+    conv1 = model.conv1()
+    conv2 = model.conv2()
+
+    train_op = train(model, conv1, conv2, args.train)
+
+    with tf.Session() as session:
+        session.run([
+            tf.local_variables_initializer(),
+            tf.global_variables_initializer(),
+        ])
+
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(session, coord)
+
+        writer = tf.summary.FileWriter(args.logdir, session.graph)
+        merged = tf.summary.merge_all()
+
+        try:
+            step = 0
+
+            while not coord.should_stop() and step < args.steps:
+                _, summary = session.run([train_op, merged])
+
+                if step % 50 == 0:
+                    print('step: {}'.format(step))
+                    writer.add_summary(summary, step)
+
+                step += 1
+
+        finally:
+            coord.request_stop()
+            coord.join(threads)
+
+        writer.close()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='evaluate model on a given dataset')
-    parser.add_argument('--record',
-        help='tfrecord file to use as for training')
-    parser.add_argument('--outdir', required=True,
-        help='directory to write summary events to')
-    parser.add_argument('--num_filters', type=int,
-        help='number of convolutional filters')
-    parser.add_argument('--filter_size', type=int,
-        help='height and width of convolutional filter')
-    parser.set_defaults(record='data/train.tfrecord',
-        num_filters=3, filter_size=3)
+    parser.add_argument('--steps', type=int,
+        help='number of steps to run')
+    parser.add_argument('--train', nargs='+',
+        help='tfrecords to use for training')
+    parser.add_argument('--logdir',
+        help='directory to write events to')
+    parser.add_argument('--filter_num',
+        help='number of filters')
+    parser.add_argument('--filter_size',
+        help='height and width of filters')
+    parser.set_defaults(train=['data/train.tfrecord'], logdir='/tmp/mrtous',
+        steps=1000, filter_num=3, filter_size=7)
 
     main(parser.parse_args())
