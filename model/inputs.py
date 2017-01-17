@@ -1,9 +1,9 @@
 import tensorflow as tf
 
-from model import common
+from model import base
 from ioutil import tfrecord
 
-class Model(common.Model):
+class Model(base.Model):
 
     def inputs(self, filenames):
         queue = tf.train.string_input_producer(filenames,
