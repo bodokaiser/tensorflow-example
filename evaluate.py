@@ -5,6 +5,20 @@ import tensorflow as tf
 from model import simple
 from hooks import signal
 
+def test(model, conv1, conv2, filenames):
+    mr, us = model.images(filenames)
+    re = model.interference(conv1, conv2, mr)
+
+    loss = model.loss(re-us)
+
+    tf.summary.scalar('loss', loss)
+    tf.summary.image('mr', mr)
+    tf.summary.image('us', us)
+    tf.summary.image('re', re)
+    tf.summary.image('df', re-us)
+
+    return [loss]
+
 def train(model, conv1, conv2, filenames):
     mr, us = model.patches(filenames)
     re = model.interference(conv1, conv2, mr)
@@ -12,12 +26,11 @@ def train(model, conv1, conv2, filenames):
     loss = model.loss(re-us)
     train = model.train(loss)
 
-    with tf.name_scope('training'):
-        tf.summary.scalar('loss', loss)
-        tf.summary.image('mr', mr)
-        tf.summary.image('us', us)
-        tf.summary.image('re', re)
-        tf.summary.image('df', re-us)
+    tf.summary.scalar('loss', loss)
+    tf.summary.image('mr', mr)
+    tf.summary.image('us', us)
+    tf.summary.image('re', re)
+    tf.summary.image('df', re-us)
 
     return [train, loss]
 
@@ -29,7 +42,10 @@ def main(args):
     conv1 = model.conv1()
     conv2 = model.conv2()
 
-    train_op = train(model, conv1, conv2, args.train)
+    with tf.name_scope('testing'):
+        test_op = test(model, conv1, conv2, args.train)
+    with tf.name_scope('training'):
+        train_op = train(model, conv1, conv2, args.train)
 
     with tf.Session() as session:
         session.run([
@@ -47,7 +63,7 @@ def main(args):
             step = 0
 
             while not coord.should_stop() and step < args.steps:
-                _, summary = session.run([train_op, merged])
+                _, _, summary = session.run([test_op, train_op, merged])
 
                 if step % 50 == 0:
                     print('step: {}'.format(step))
