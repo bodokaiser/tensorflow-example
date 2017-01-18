@@ -5,35 +5,44 @@ import tensorflow as tf
 from model import simple
 from hooks import signal
 
-def test(model, conv1, conv2, filenames):
-    mr, us = model.images(filenames)
-    re = model.interference(conv1, conv2, mr)
-    re = tf.where(tf.equal(us, 0), tf.zeros_like(re), re)
+class Run(object):
 
-    loss = model.loss(re-us)
+    def __init__(self, model, conv1, conv2):
+        self._model = model
+        self._conv1 = conv1
+        self._conv2 = conv2
 
-    tf.summary.scalar('loss', loss)
-    tf.summary.image('mr', mr)
-    tf.summary.image('us', us)
-    tf.summary.image('re', re)
-    tf.summary.image('df', re-us)
+    def build(self):
+        self.re = self._model.interference(self._conv1, self._conv2, self.mr)
+        self.df = self.us-self.re
+        self.loss = self._model.loss(self.df)
 
-    return [loss]
+    def summarize(self):
+        tf.summary.scalar('loss', self.loss)
+        tf.summary.image('mr', self.mr)
+        tf.summary.image('us', self.us)
+        tf.summary.image('re', self.re)
+        tf.summary.image('df', self.df)
 
-def train(model, conv1, conv2, filenames):
-    mr, us = model.patches(filenames)
-    re = model.interference(conv1, conv2, mr)
+class PatchesRun(Run):
 
-    loss = model.loss(re-us)
-    train = model.train(loss)
+    def build(self, filename, train=False):
+        self.mr, self.us = self._model.patches(filename)
 
-    tf.summary.scalar('loss', loss)
-    tf.summary.image('mr', mr)
-    tf.summary.image('us', us)
-    tf.summary.image('re', re)
-    tf.summary.image('df', re-us)
+        super().build()
 
-    return [train, loss]
+        if train:
+            self.train = self._model.train(self.loss)
+
+class ImagesRun(Run):
+
+    def build(self, filename):
+        self.mr, self.us = self._model.images(filename)
+
+        super().build()
+
+        self.re = tf.where(tf.equal(self.us, 0),
+            tf.zeros_like(self.re), self.re)
 
 def main(args):
     model = simple.Model(
@@ -43,10 +52,15 @@ def main(args):
     conv1 = model.conv1()
     conv2 = model.conv2()
 
-    with tf.name_scope('testing'):
-        test_op = test(model, conv1, conv2, args.train)
-    with tf.name_scope('training'):
-        train_op = train(model, conv1, conv2, args.train)
+    with tf.name_scope('train'):
+        with tf.name_scope('images'):
+            images_train_run = ImagesRun(model, conv1, conv2)
+            images_train_run.build(args.train)
+            images_train_run.summarize()
+        with tf.name_scope('patches'):
+            patches_train_run = PatchesRun(model, conv1, conv2)
+            patches_train_run.build(args.train, train=True)
+            patches_train_run.summarize()
 
     with tf.Session() as session:
         session.run([
@@ -64,7 +78,11 @@ def main(args):
             step = 0
 
             while not coord.should_stop() and step < args.steps:
-                _, _, summary = session.run([test_op, train_op, merged])
+                session.run([
+                    patches_train_run.train,
+                    images_train_run.loss,
+                ])
+                summary = session.run(merged)
 
                 if step % 50 == 0:
                     print('step: {}'.format(step))
@@ -83,8 +101,12 @@ if __name__ == '__main__':
         description='evaluate model on a given dataset')
     parser.add_argument('--steps', type=int,
         help='number of steps to run')
+    parser.add_argument('--test', nargs='+',
+        help='tfrecords to use for testing')
     parser.add_argument('--train', nargs='+',
         help='tfrecords to use for training')
+    parser.add_argument('--valid', nargs='+',
+        help='tfrecords to use for validation')
     parser.add_argument('--logdir',
         help='directory to write events to')
     parser.add_argument('--filter_num',

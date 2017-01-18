@@ -34,16 +34,10 @@ class Model(inputs.Model):
         return self._filter_size
 
     def loss(self, re):
-        with tf.name_scope('loss'):
-            loss = tf.nn.l2_loss(re)
-
-        return loss
+        return tf.nn.l2_loss(re)
 
     def train(self, loss):
-        with tf.name_scope('train'):
-            train = tf.train.AdamOptimizer().minimize(loss)
-
-        return train
+        return tf.train.AdamOptimizer().minimize(loss)
 
     def conv1(self):
         with tf.name_scope('conv1'):
