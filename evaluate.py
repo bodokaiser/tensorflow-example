@@ -110,14 +110,14 @@ def main(args):
                     patches_test_run.loss,
                     images_test_run.loss,
                 ])
-                summary = session.run(merged)
 
                 if step % 50 == 0:
                     print('step: {}'.format(step))
-                    writer.add_summary(summary, step)
+                    writer.add_summary(session.run(merged), step)
 
                 step += 1
-
+        except tf.errors.OutOfRangeError as error:
+            coord.request_stop(error)
         finally:
             coord.request_stop()
             coord.join(threads)
