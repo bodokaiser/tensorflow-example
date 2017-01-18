@@ -32,12 +32,10 @@ class Model(object):
 
         return mr, us
 
-    def images(self, filenames, batch_size=12):
+    def images(self, filenames):
         mr, us = self.inputs(filenames)
 
-        return tf.train.shuffle_batch([mr, us], batch_size,
-            num_threads=self.num_threads, min_after_dequeue=batch_size,
-            capacity=self.num_threads*batch_size*3)
+        return tf.expand_dims(mr, 0), tf.expand_dims(us, 0)
 
     def patches(self, filenames, patch_size=7, batch_size=128, threshold=0):
         mr, us = self.inputs(filenames)
