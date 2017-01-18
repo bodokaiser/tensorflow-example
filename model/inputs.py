@@ -13,13 +13,6 @@ def filter_sum_greater(tensors, value):
 
 class Model(object):
 
-    def __init__(self, num_threads=8):
-        self._num_threads = num_threads
-
-    @property
-    def num_threads(self):
-        return self._num_threads
-
     def inputs(self, filenames):
         queue = tf.train.string_input_producer(filenames)
 
@@ -37,7 +30,8 @@ class Model(object):
 
         return tf.expand_dims(mr, 0), tf.expand_dims(us, 0)
 
-    def patches(self, filenames, patch_size=7, batch_size=128, threshold=0):
+    def patches(self, filenames, patch_size=7, batch_size=128,
+        threshold=0, num_threads=8):
         mr, us = self.inputs(filenames)
 
         with tf.name_scope('patch'):
@@ -51,5 +45,5 @@ class Model(object):
             us_patches = tf.gather(us_patches, indices)
 
         return tf.train.shuffle_batch([mr_patches, us_patches], batch_size,
-            num_threads=self.num_threads, min_after_dequeue=batch_size,
-            capacity=self.num_threads*batch_size*3, enqueue_many=True)
+            num_threads=num_threads, min_after_dequeue=batch_size,
+            capacity=num_threads*batch_size*3, enqueue_many=True)

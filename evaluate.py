@@ -26,7 +26,11 @@ class Run(object):
 
 class PatchesRun(Run):
 
-    def build(self, filename, train=False):
+    def build(self, filename, epochs=0, train=False):
+        if epochs > 0:
+            filename = tf.train.limit_epochs(tf.convert_to_tensor(filename),
+                epochs)
+
         self.mr, self.us = self._model.patches(filename)
 
         super().build()
@@ -53,14 +57,34 @@ def main(args):
     conv2 = model.conv2()
 
     with tf.name_scope('train'):
+        with tf.name_scope('patches'):
+            patches_train_run = PatchesRun(model, conv1, conv2)
+            patches_train_run.build(args.train, args.epochs, train=True)
+            patches_train_run.summarize()
         with tf.name_scope('images'):
             images_train_run = ImagesRun(model, conv1, conv2)
             images_train_run.build(args.train)
             images_train_run.summarize()
+
+    with tf.name_scope('valid'):
         with tf.name_scope('patches'):
-            patches_train_run = PatchesRun(model, conv1, conv2)
-            patches_train_run.build(args.train, train=True)
-            patches_train_run.summarize()
+            patches_valid_run = PatchesRun(model, conv1, conv2)
+            patches_valid_run.build(args.valid)
+            patches_valid_run.summarize()
+        with tf.name_scope('images'):
+            images_valid_run = ImagesRun(model, conv1, conv2)
+            images_valid_run.build(args.train)
+            images_valid_run.summarize()
+
+    with tf.name_scope('test'):
+        with tf.name_scope('patches'):
+            patches_test_run = PatchesRun(model, conv1, conv2)
+            patches_test_run.build(args.test)
+            patches_test_run.summarize()
+        with tf.name_scope('images'):
+            images_test_run = ImagesRun(model, conv1, conv2)
+            images_test_run.build(args.test)
+            images_test_run.summarize()
 
     with tf.Session() as session:
         session.run([
@@ -77,10 +101,14 @@ def main(args):
         try:
             step = 0
 
-            while not coord.should_stop() and step < args.steps:
+            while not coord.should_stop():
                 session.run([
                     patches_train_run.train,
                     images_train_run.loss,
+                    patches_valid_run.loss,
+                    images_valid_run.loss,
+                    patches_test_run.loss,
+                    images_test_run.loss,
                 ])
                 summary = session.run(merged)
 
@@ -99,8 +127,8 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='evaluate model on a given dataset')
-    parser.add_argument('--steps', type=int,
-        help='number of steps to run')
+    parser.add_argument('--epochs', type=int,
+        help='number of epochs to run')
     parser.add_argument('--test', nargs='+',
         help='tfrecords to use for testing')
     parser.add_argument('--train', nargs='+',
@@ -113,7 +141,10 @@ if __name__ == '__main__':
         help='number of filters')
     parser.add_argument('--filter_size',
         help='height and width of filters')
-    parser.set_defaults(train=['data/train.tfrecord'], logdir='/tmp/mrtous',
-        steps=1000, filter_num=3, filter_size=7)
+    parser.set_defaults(epochs=30, filter_num=3, filter_size=7,
+        train=['data/train.tfrecord'],
+        valid=['data/valid.tfrecord'],
+        test=['data/test.tfrecord'],
+        logdir='/tmp/mrtous')
 
     main(parser.parse_args())
