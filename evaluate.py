@@ -8,6 +8,7 @@ from hooks import signal
 def test(model, conv1, conv2, filenames):
     mr, us = model.images(filenames)
     re = model.interference(conv1, conv2, mr)
+    re = tf.where(tf.equal(us, 0), tf.zeros_like(re), re)
 
     loss = model.loss(re-us)
 
