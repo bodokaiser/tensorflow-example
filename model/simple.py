@@ -33,11 +33,11 @@ class Model(inputs.Model):
     def filter_size(self):
         return self._filter_size
 
-    def loss(self, re):
-        return tf.nn.l2_loss(re)
+    def loss(self, df):
+        return tf.reduce_sum(df**2, name='l2norm')
 
     def train(self, loss):
-        return tf.train.AdamOptimizer().minimize(loss)
+        return tf.train.AdamOptimizer(.00001).minimize(loss)
 
     def conv1(self):
         with tf.name_scope('conv1'):

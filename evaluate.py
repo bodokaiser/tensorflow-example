@@ -14,15 +14,15 @@ class Run(object):
 
     def build(self):
         self.re = self._model.interference(self._conv1, self._conv2, self.mr)
-        self.df = self.us-self.re
-        self.loss = self._model.loss(self.df)
+        self.df = (self.us-self.re)**2
+        self.loss = tf.reduce_sum(self.df, name='l2norm')
 
     def summarize(self):
         tf.summary.scalar('loss', self.loss)
-        tf.summary.image('mr', self.mr)
-        tf.summary.image('us', self.us)
-        tf.summary.image('re', self.re)
-        tf.summary.image('df', self.df)
+        tf.summary.image('mr', self.mr, max_outputs=1)
+        tf.summary.image('us', self.us, max_outputs=1)
+        tf.summary.image('re', self.re, max_outputs=1)
+        tf.summary.image('df', self.df, max_outputs=1)
 
 class PatchesRun(Run):
 
@@ -73,7 +73,7 @@ def main(args):
             patches_valid_run.summarize()
         with tf.name_scope('images'):
             images_valid_run = ImagesRun(model, conv1, conv2)
-            images_valid_run.build(args.train)
+            images_valid_run.build(args.valid)
             images_valid_run.summarize()
 
     with tf.name_scope('test'):
@@ -111,9 +111,10 @@ def main(args):
                     images_test_run.loss,
                 ])
 
-                if step % 50 == 0:
-                    print('step: {}'.format(step))
+                if step % 10 == 0:
                     writer.add_summary(session.run(merged), step)
+                if step % 100 == 0:
+                    print('step: {}'.format(step))
 
                 step += 1
         except tf.errors.OutOfRangeError as error:
