@@ -11,8 +11,8 @@ us = read_minc('../mnibite/minc/13_us.mnc');
 num_samples = size(mr, 3);
 set_indices = randperm(num_samples);
 
-mr_resized = zeros([393 465 1 378]);
-us_resized = zeros([393 465 1 378]);
+mr_resized = zeros([393 465 1 378], 'single');
+us_resized = zeros([393 465 1 378], 'single');
 
 for i = 1:num_samples
     mr_resized(:, :, 1, i) = imresize(mr(i), [393 465]);
