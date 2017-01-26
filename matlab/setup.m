@@ -11,12 +11,12 @@ us = read_minc('../mnibite/minc/13_us.mnc');
 num_samples = size(mr, 3);
 set_indices = randperm(num_samples);
 
-mr_resized = zeros([393 465 378]);
-us_resized = zeros([393 465 378]);
+mr_resized = zeros([393 465 1 378]);
+us_resized = zeros([393 465 1 378]);
 
 for i = 1:num_samples
-    mr_resized(:, :, i) = imresize(mr(i), [393 465]);
-    us_resized(:, :, i) = imresize(us(i), [393 465]);
+    mr_resized(:, :, 1, i) = imresize(mr(i), [393 465]);
+    us_resized(:, :, 1, i) = imresize(us(i), [393 465]);
 end
 
 dataset.images.data = mr_resized;
