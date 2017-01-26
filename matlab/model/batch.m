@@ -1,4 +1,4 @@
-function [images, labels] = batch( dataset, batch )
+function [images, labels] = batch(dataset, batch)
 
 images = dataset.images(:, :, batch);
 labels = dataset.labels(:, :, batch);
