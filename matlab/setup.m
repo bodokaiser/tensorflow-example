@@ -27,4 +27,9 @@ dataset.images.set = ones(1, num_samples);
 dataset.images.set(set_indices(floor(.7*num_samples):1:floor(.9*num_samples))) = 2;
 dataset.images.set(set_indices(floor(.9*num_samples)+1:1:end)) = 3;
 
-[net, info] = cnn_train(cnn(), dataset, @batch)
+trainOpts.learningRate = .001;
+trainOpts.numEpochs = 10;
+trainOpts.batchSize = 10;
+trainOpts.errorFunction = 'none';
+
+[net, info] = cnn_train(cnn(), dataset, @batch, trainOpts)
